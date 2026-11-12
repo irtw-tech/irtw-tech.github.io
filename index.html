@@ -1,0 +1,856 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IA en atención al cliente · Ilan Rubin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+/* Concepto: documento de diseño técnico. Columna de lectura + lienzos de flujo a ancho completo que imitan el editor de Make. */
+:root{
+  --paper:#f6f5f1; --sheet:#ffffff; --ink:#16181d; --ink-2:#4a4f5a; --ink-3:#7c8290;
+  --rule:#dcd9d0; --rule-2:#ebe8e0; --accent:#5b2bd6; --accent-soft:#efe9ff;
+  --ok:#1f7a4d; --warn:#a15c07; --bad:#b4232c; --code-bg:#14161b; --code-ink:#e6e6e6;
+  --canvas:#fbfaf7; --grid:#ecebe5;
+  --sans:'Manrope',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace;
+  /* colores de app, como en Make */
+  --app-sf:#0d9dda; --app-ai:#7b4dff; --app-sheets:#0f9d58; --app-bq:#3b78e7; --app-http:#2e5c99;
+  --app-code:#e0761a; --app-router:#7cb342; --app-drive:#d39c00; --app-flow:#5b2bd6; --app-tel:#222; --app-ds:#9b59b6; --app-sys:#8a8f98;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#111216; --sheet:#17191e; --ink:#eceae4; --ink-2:#b7b9c0; --ink-3:#8a8e98;
+  --rule:#2b2e36; --rule-2:#22252c; --accent:#a58bff; --accent-soft:#251d3d;
+  --ok:#5bc48c; --warn:#e3a84c; --bad:#ef6b72; --code-bg:#0b0c0f; --code-ink:#e6e6e6;
+  --canvas:#14161a; --grid:#1e2127; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#111216; --sheet:#17191e; --ink:#eceae4; --ink-2:#b7b9c0; --ink-3:#8a8e98;
+  --rule:#2b2e36; --rule-2:#22252c; --accent:#a58bff; --accent-soft:#251d3d;
+  --ok:#5bc48c; --warn:#e3a84c; --bad:#ef6b72; --code-bg:#0b0c0f; --code-ink:#e6e6e6;
+  --canvas:#14161a; --grid:#1e2127; color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+code,.mono{font-family:var(--mono);font-size:.86em}
+:not(pre)>code{background:var(--rule-2);padding:.08em .35em;border-radius:3px}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:max(20px,env(safe-area-inset-left,0px)) max(20px,env(safe-area-inset-right,0px))}
+.read{max-width:760px}
+
+/* cabecera */
+header.top{border-bottom:1px solid var(--rule);background:var(--sheet)}
+.top .wrap{padding-block:56px 40px}
+.kicker{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+h1{font-size:clamp(30px,4.4vw,50px);line-height:1.08;letter-spacing:-.02em;margin:14px 0 18px;font-weight:800;text-wrap:balance;max-width:900px}
+.lede{font-size:19px;color:var(--ink-2);max-width:760px;margin:0}
+.meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0;margin-top:34px;border-top:1px solid var(--rule)}
+.meta>div{padding:14px 18px 0 0}
+.meta dt{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.meta dd{margin:4px 0 0;font-weight:600;font-size:15px}
+.note{margin-top:28px;border-left:3px solid var(--accent);padding:10px 16px;background:var(--accent-soft);font-size:14px;color:var(--ink-2);max-width:820px}
+
+/* navegación de capítulos */
+nav.chapters{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--paper) 92%,transparent);backdrop-filter:blur(6px);border-bottom:1px solid var(--rule)}
+nav.chapters ol{list-style:none;margin:0;padding:0;display:flex;gap:0;overflow-x:auto;scrollbar-width:none}
+nav.chapters li{flex:0 0 auto}
+nav.chapters a{display:block;padding:13px 16px;text-decoration:none;color:var(--ink-3);font-size:13.5px;font-weight:600;border-bottom:2px solid transparent;white-space:nowrap}
+nav.chapters a span{font-family:var(--mono);font-weight:500;margin-right:6px;color:var(--ink-3)}
+nav.chapters a.on,nav.chapters a:hover{color:var(--ink);border-bottom-color:var(--accent)}
+nav.chapters a:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+
+/* secciones */
+section.ch{padding-block:72px 24px;border-bottom:1px solid var(--rule)}
+.chnum{font-family:var(--mono);font-size:13px;color:var(--accent);letter-spacing:.06em}
+h2{font-size:clamp(26px,3vw,36px);line-height:1.15;letter-spacing:-.015em;margin:8px 0 18px;font-weight:800;text-wrap:balance}
+h3{font-size:19px;margin:44px 0 10px;letter-spacing:-.01em}
+h4{font-size:13px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--ink-3);margin:28px 0 8px;font-weight:600}
+p{margin:0 0 14px}
+.read ul{padding-left:20px;margin:0 0 14px}
+.read li{margin-bottom:6px}
+
+/* resultados */
+.results{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));border:1px solid var(--rule);background:var(--sheet);margin:26px 0}
+.results>div{padding:18px 20px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);min-width:0}
+.results .v{font-size:30px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.results .v small{font-size:15px;color:var(--ink-3);font-weight:600}
+.results .l{font-size:13.5px;color:var(--ink-2);margin-top:2px}
+.results .s{font-family:var(--mono);font-size:11px;color:var(--ink-3);margin-top:8px}
+
+table.t{width:100%;border-collapse:collapse;font-size:14px;background:var(--sheet);border:1px solid var(--rule)}
+.tablewrap{overflow-x:auto;margin:14px 0 22px}
+table.t th,table.t td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--rule-2);vertical-align:top}
+table.t th{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);font-weight:600;background:var(--rule-2)}
+table.t td.n{font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:600}
+table.t code{white-space:nowrap}
+
+/* barras de comparación */
+.bars{margin:18px 0 26px;display:grid;gap:12px;max-width:760px}
+.bar{display:grid;grid-template-columns:210px 1fr 64px;gap:12px;align-items:center;font-size:14px}
+.bar .track{height:12px;background:var(--rule-2);position:relative}
+.bar .fill{position:absolute;inset:0 auto 0 0;background:var(--ink-3)}
+.bar.ai .fill{background:var(--accent)}
+.bar .pct{font-variant-numeric:tabular-nums;font-weight:700;text-align:right}
+@media (max-width:620px){.bar{grid-template-columns:1fr 54px}.bar .track{grid-column:1/-1;order:3}}
+
+/* status */
+.status{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12px;border:1px solid var(--rule);padding:4px 10px;background:var(--sheet);margin:0 8px 8px 0}
+.status i{width:8px;height:8px;display:inline-block;background:var(--ok)}
+.status.shadow i{background:var(--warn)}
+.status.test i{background:var(--app-bq)}
+
+/* código */
+pre{background:var(--code-bg);color:var(--code-ink);padding:16px 18px;overflow-x:auto;font-family:var(--mono);font-size:12.8px;line-height:1.55;margin:12px 0 22px;border-radius:2px}
+pre .c{color:#7f8796}
+pre .k{color:#c9a6ff}
+pre .s{color:#9fd69a}
+pre .n{color:#f2b56b}
+.codehead{display:flex;justify-content:space-between;align-items:baseline;font-family:var(--mono);font-size:11.5px;color:var(--ink-3);margin-top:22px;border-bottom:1px solid var(--rule);padding-bottom:4px}
+
+/* ===== lienzo tipo Make ===== */
+.flowbox{margin:22px 0 34px;border:1px solid var(--rule);background:var(--sheet)}
+.flowbar{display:flex;flex-wrap:wrap;gap:10px 18px;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--rule);font-size:13px}
+.flowbar .ttl{font-weight:700}
+.flowbar .ttl .mono{color:var(--ink-3);font-weight:400;margin-left:8px}
+.flowbar .tools{display:flex;gap:6px;flex-wrap:wrap}
+.btn{font:600 12px var(--sans);border:1px solid var(--rule);background:var(--sheet);color:var(--ink);padding:6px 10px;cursor:pointer;border-radius:2px}
+.btn:hover{border-color:var(--ink-3)}
+.btn[aria-pressed="true"]{background:var(--ink);color:var(--sheet);border-color:var(--ink)}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.flowgrid{display:grid;grid-template-columns:1fr}
+.canvas{overflow:auto;background-color:var(--canvas);background-image:radial-gradient(var(--grid) 1.2px,transparent 1.2px);background-size:18px 18px;padding:30px 24px 26px;min-height:240px;max-height:640px}
+.zoom{display:inline-flex;border:1px solid var(--rule)}
+.zoom .btn{border:0;border-right:1px solid var(--rule)}
+.zoom .btn:last-child{border-right:0}
+.chain{display:flex;align-items:flex-start}
+.mod{display:flex;align-items:flex-start;flex:0 0 auto}
+.mod .wire{width:30px;height:2px;background:var(--ink-3);opacity:.45;margin-top:31px;flex:0 0 auto;position:relative}
+.mod .wire.dot::after{content:"";position:absolute;left:50%;top:-4px;width:8px;height:8px;border-radius:50%;background:var(--sheet);border:2px solid var(--ink-3);transform:translateX(-50%)}
+.node{width:96px;display:flex;flex-direction:column;align-items:center;text-align:center;cursor:pointer;background:none;border:0;padding:0;color:inherit;font:inherit}
+.node .disc{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;color:#fff;font:700 11px var(--mono);letter-spacing:.02em;position:relative;box-shadow:0 0 0 4px var(--canvas),0 1px 0 4px var(--rule)}
+.node .disc b{font-size:15px}
+.node .idx{position:absolute;right:-6px;top:-6px;background:var(--sheet);color:var(--ink);border:1px solid var(--rule);font:600 10px var(--mono);padding:1px 4px;border-radius:9px}
+.node .lbl{margin-top:9px;font-size:11.5px;line-height:1.3;color:var(--ink);font-weight:600;max-width:96px}
+.node .app{font-family:var(--mono);font-size:10px;color:var(--ink-3);margin-top:2px;white-space:nowrap}
+.node:focus-visible .disc{outline:2px solid var(--accent);outline-offset:4px}
+.node.sel .disc{box-shadow:0 0 0 4px var(--canvas),0 0 0 7px var(--accent)}
+.node .err{position:absolute;left:-6px;bottom:-4px;background:var(--bad);color:#fff;font:700 9px var(--mono);padding:1px 4px;border-radius:2px}
+.routes{display:flex;flex-direction:column;gap:18px;margin-top:31px;padding-top:0;position:relative}
+.routes>.spine{position:absolute;left:0;top:0;width:2px;background:var(--ink-3);opacity:.45}
+.route{display:flex;align-items:flex-start;margin-top:-31px}
+.route:first-child{margin-top:-31px}
+.route>.fl{flex:0 0 auto;width:140px;margin-top:22px;position:relative;height:20px}
+.route>.fl::before{content:"";position:absolute;left:0;right:0;top:9px;height:2px;background:var(--ink-3);opacity:.45}
+.route>.fl span{position:absolute;left:8px;right:4px;top:-17px;font:500 10px var(--mono);color:var(--ink-2);background:var(--canvas);padding:1px 4px;border:1px dashed var(--rule);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.route>.fl.funnel::after{content:"";position:absolute;left:58px;top:2px;width:14px;height:14px;background:var(--sheet);border:2px solid var(--app-router);transform:rotate(45deg)}
+.route+.route{margin-top:6px}
+.mod>div{position:relative}
+.errbranch{position:absolute;left:-40px;top:150px;display:flex;align-items:flex-start;z-index:1}
+.canvas.has-err{padding-bottom:190px}
+.errbranch .elbl{font:600 10px var(--mono);color:var(--bad);border:1px dashed var(--bad);padding:2px 5px;margin:24px 10px 0 0;white-space:nowrap}
+
+.inspector{border-top:1px solid var(--rule);padding:16px 20px;font-size:14px;background:var(--sheet);min-width:0;min-height:150px}
+.inspector dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:0 28px}
+.inspector dl>div{min-width:0}
+.inspector .h{display:flex;gap:10px;align-items:center;margin-bottom:10px}
+.inspector .sw{width:26px;height:26px;border-radius:50%;flex:0 0 auto}
+.inspector .ttl{font-weight:800;line-height:1.25}
+.inspector .ap{font-family:var(--mono);font-size:11px;color:var(--ink-3)}
+.inspector dl{margin:0}
+.inspector dt{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin-top:12px}
+.inspector dd{margin:3px 0 0;color:var(--ink-2)}
+.inspector dd code{font-size:12px;white-space:pre-wrap;word-break:break-word}
+.inspector .empty{color:var(--ink-3)}
+.blueprint{display:none;border-top:1px solid var(--rule)}
+.blueprint pre{margin:0;max-height:460px;border-radius:0}
+.blueprint.on{display:block}
+
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--ink-2);margin:6px 0 0}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:11px;height:11px;border-radius:50%;display:inline-block}
+
+/* arquitectura IVR */
+.arch{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;border:1px solid var(--rule);background:var(--sheet);margin:20px 0 28px}
+.arch>div{padding:16px 18px;border-right:1px solid var(--rule);min-width:0}
+.arch>div:last-child{border-right:0}
+.arch h5{margin:0 0 8px;font:600 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.arch ol{margin:0;padding-left:18px;font-size:14px}
+.arch li{margin-bottom:6px}
+@media (max-width:820px){.arch{grid-template-columns:1fr}.arch>div{border-right:0;border-bottom:1px solid var(--rule)}}
+
+/* simulador */
+.sim{border:1px solid var(--rule);background:var(--sheet);margin:22px 0 30px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+@media (max-width:820px){.sim{grid-template-columns:1fr}}
+.sim .in{padding:18px 20px;border-right:1px solid var(--rule);display:grid;gap:12px;align-content:start}
+@media (max-width:820px){.sim .in{border-right:0;border-bottom:1px solid var(--rule)}}
+.sim label{font-size:13px;font-weight:600;display:grid;gap:5px}
+.sim select,.sim input[type=number]{font:500 14px var(--sans);padding:7px 9px;border:1px solid var(--rule);background:var(--paper);color:var(--ink);border-radius:2px;width:100%}
+.sim .chk{display:flex;gap:8px;align-items:center;font-weight:500}
+.sim .out{padding:18px 20px}
+.sim .rama{font:700 20px var(--mono);margin:4px 0 6px}
+.sim .who{display:inline-block;font:600 11px var(--mono);padding:3px 8px;border:1px solid var(--rule);margin-bottom:10px}
+.sim .who.auto{border-color:var(--ok);color:var(--ok)}
+.sim .who.human{border-color:var(--warn);color:var(--warn)}
+.sim .trace{font-family:var(--mono);font-size:12px;color:var(--ink-2);background:var(--paper);padding:10px 12px;border:1px solid var(--rule-2);white-space:pre-wrap}
+
+/* lecciones */
+.lessons{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:0;border:1px solid var(--rule);background:var(--sheet);margin:18px 0 26px}
+.lessons>div{padding:16px 18px;border-right:1px solid var(--rule-2);border-bottom:1px solid var(--rule-2);font-size:14px;min-width:0}
+.lessons b{display:block;margin-bottom:4px}
+.lessons p{margin:0;color:var(--ink-2)}
+.lessons .tag{font:600 10px var(--mono);color:var(--accent);letter-spacing:.06em;text-transform:uppercase}
+
+footer{padding-block:40px 70px;color:var(--ink-3);font-size:13px}
+/* ===== impresión / PDF ===== */
+@page{size:A4;margin:14mm 12mm}
+@media print{
+  :root{color-scheme:light}
+  body{background:#fff;font-size:12.5px;line-height:1.5}
+  nav.chapters,.flowbar .tools,.blueprint,.inspector{display:none!important}
+  header.top{background:#fff}
+  .top .wrap{padding-block:0 18px}
+  h1{font-size:30px;margin:8px 0 10px}
+  .lede{font-size:14px}
+  .wrap{max-width:none;padding-inline:0}
+  .read{max-width:none}
+  section.ch{padding-block:22px 6px;border-bottom:1px solid #ddd}
+
+  h2{font-size:22px;margin:4px 0 10px}
+  h3{font-size:15px;margin:18px 0 6px}
+  h2,h3,h4,.chnum,.codehead{break-after:avoid}
+  p,li{orphans:3;widows:3}
+  li,tr,pre,.results,.arch,.sim,.lessons>div,.bars,.status,.note,.meta{break-inside:avoid}
+  .flowbox{break-inside:avoid;margin:12px 0 16px}
+  .canvas{max-height:none!important;overflow:hidden!important;padding:16px 12px;background-image:none}
+  pre{font-size:10.5px;white-space:pre-wrap;word-break:break-word}
+  table.t{font-size:11.5px}
+  table.t thead{display:table-header-group}
+  .tablewrap{overflow:visible}
+  table.t code{white-space:normal}
+  .results .v{font-size:22px}
+  .sim{grid-template-columns:1fr 1fr}
+  .lessons{grid-template-columns:1fr 1fr}
+  footer{padding-block:12px 0}
+}
+
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="kicker">Ejemplos de trabajo · Ilan Rubin</div>
+    <h1>De un buzón mal clasificado a una atención al cliente que se resuelve sola</h1>
+    <p class="lede">Cómo llevé la IA a la atención al cliente de una comercializadora de energía en España, en cinco pasos que se apoyan unos en otros: entender el problema con datos, clasificar bien, usar esa clasificación para enrutar, responder automáticamente lo repetitivo y llevar el mismo criterio al teléfono.</p>
+    <dl class="meta">
+      <div><dt>Contexto</dt><dd>papernest · energía España · email y teléfono</dd></div>
+      <div><dt>Periodo</dt><dd>2026, en curso</dd></div>
+      <div><dt>Stack</dt><dd>Make · Salesforce · BigQuery · Gemini · ElevenLabs · API del ERP de contratos · VS Code + Claude Code</dd></div>
+      <div><dt>Mi papel</dt><dd>Diseño, construcción, calibración y despliegue</dd></div>
+    </dl>
+    <div class="note">Todo lo técnico es una reconstrucción fiel del diseño real: mismos módulos, mismas rutas, misma lógica y mismas llamadas. Los nombres de tablas, identificadores, endpoints, prompts y textos están reescritos o abstraídos, y no aparece ningún dato de clientes.</div>
+  </div>
+</header>
+
+<nav class="chapters" aria-label="Capítulos">
+  <div class="wrap"><ol>
+    <li><a href="#problema"><span>01</span>El problema</a></li>
+    <li><a href="#clasificador"><span>02</span>Clasificador</a></li>
+    <li><a href="#documentacion"><span>03</span>Documentación</a></li>
+    <li><a href="#cancelacion"><span>04</span>Cancelación</a></li>
+    <li><a href="#voz"><span>05</span>Agente de voz</a></li>
+    <li><a href="#integraciones"><span>06</span>Integraciones</a></li>
+    <li><a href="#criterio"><span>07</span>Cómo construyo</a></li>
+    <li><a href="#rol"><span>08</span>Qué hice yo</a></li>
+  </ol></div>
+</nav>
+
+<main>
+
+<!-- 01 -->
+<section class="ch" id="problema"><div class="wrap">
+  <div class="chnum">01 · El problema</div>
+  <h2>Antes de automatizar nada: medir lo mal que estaba la clasificación</h2>
+  <div class="read">
+    <p>Cada email de un cliente se convierte en un caso de Salesforce con un <b>motivo y submotivo</b> (Reason / SubReason). De esa etiqueta depende todo: a qué equipo llega, qué se mide y qué ve Calidad. La sospecha era que estaba mal. Antes de construir nada, lo medí.</p>
+    <p>Extraje los <b>4.714 casos de email</b> del año con el primer mensaje del cliente, hice un análisis estructural del 100 % y una lectura manual estratificada de unos 800 emails, y lo contrasté con la taxonomía oficial del proceso.</p>
+  </div>
+
+  <div class="results">
+    <div><div class="v">23,1<small> %</small></div><div class="l">de los casos se cerraba sin motivo asignado</div><div class="s">1.091 / 4.714 · 17,2 % sobre la base limpia</div></div>
+    <div><div class="v">22<small> %</small></div><div class="l">de acierto humano en los cuatro cajones «Others»</div><div class="s">auditoría caso a caso, 573 casos</div></div>
+    <div><div class="v">~30<small> %</small></div><div class="l">de lo etiquetado como «Facturación» era realmente facturación</div><div class="s">36 % era cobranza mal enrutada</div></div>
+    <div><div class="v">7,8<small> %</small></div><div class="l">del volumen era ruido técnico, no clientes</div><div class="s">un bucle de autorespuestas que creaba casos</div></div>
+  </div>
+
+  <div class="read">
+    <h4>Lo que salió del análisis</h4>
+    <ul>
+      <li><b>El problema era del sistema, no de las personas.</b> Salesforce dejaba cerrar un caso sin clasificar, y la lista de valores no coincidía con la taxonomía oficial: había subcategorías sin respaldo y categorías oficiales que nunca se usaban.</li>
+      <li><b>Reclamaciones graves escondidas.</b> Fraudes y cortes indebidos etiquetados como gestión de servicio quedaban fuera del radar de Calidad.</li>
+      <li><b>Un bug de ingesta.</b> Un autoresponder externo rebotaba con nuestro acuse de recibo y generaba cientos de casos falsos. Lo separé y lo reporté aparte, para no mezclar un fallo técnico con un problema de clasificación.</li>
+    </ul>
+    <p>De ahí salió el <b>rulebook</b>: 17 combinaciones válidas de motivo y submotivo, cada una con definición, señales típicas, ejemplos correctos, casos confusos y reglas de prioridad. Es la especificación que después usan el clasificador, las respuestas automáticas y el agente de voz.</p>
+  </div>
+</div></section>
+
+<!-- 02 -->
+<section class="ch" id="clasificador"><div class="wrap">
+  <div class="chnum">02 · Clasificar bien</div>
+  <h2>Un clasificador que lee cada caso nuevo, escribe el motivo y decide a dónde va</h2>
+  <span class="status"><i></i>En producción desde septiembre de 2026</span>
+  <div class="read">
+    <p>El escenario vigila los casos nuevos de email, le pasa el asunto y el cuerpo a Gemini con el rulebook como system prompt y recibe una salida estructurada. Con eso hace tres cosas a la vez: deja traza para calibrar, escribe el motivo en Salesforce y, si el caso es de un tipo que sabemos resolver, lo manda al subflujo de respuesta automática.</p>
+  </div>
+
+  <div class="flowbox" data-flow="clasificador"></div>
+
+  <div class="read">
+    <div class="codehead"><span>Salida estructurada del módulo de IA (esquema)</span><span>JSON</span></div>
+<pre>{
+  <span class="k">"reason"</span>:     <span class="s">"Finance"</span>,              <span class="c">// 4 motivos posibles o "UNCLEAR"</span>
+  <span class="k">"subreason"</span>:  <span class="s">"Recollection"</span>,         <span class="c">// una de las 17 combinaciones válidas</span>
+  <span class="k">"confidence"</span>: <span class="n">0.97</span>,
+  <span class="k">"rationale"</span>:  <span class="s">"Pide el enlace para pagar una factura pendiente: la intención de pago pesa más que la petición del documento."</span>
+}</pre>
+
+    <div class="codehead"><span>Estructura del system prompt (reescrito)</span><span>Markdown</span></div>
+<pre><span class="c"># Rol</span>
+Clasificas el PRIMER email de un cliente de una comercializadora de energía.
+
+<span class="c"># Taxonomía</span>  17 combinaciones válidas Reason > SubReason. Fuera de esta lista no hay respuesta válida.
+
+<span class="c"># Por cada combinación</span>
+- Definición operativa (qué SÍ es)
+- Señales típicas en el texto
+- Ejemplos correctos
+- Casos confusos y con qué NO confundirla
+
+<span class="c"># Reglas transversales de prioridad</span>
+- Intención de pago  > petición de documento        → Cobranza
+- CUPS cruzado o error en la venta                   → Reclamación (alarma de Calidad)
+- Reclamación tramitada por un organismo de consumo → Reclamación, sea cual sea el tema
+- «Me han cortado la luz» ≠ «se me ha ido la luz»    → Corte por impago vs. incidencia
+
+<span class="c"># Política UNCLEAR</span>
+Solo si no hay contenido del cliente (firma, adjunto sin texto, autorespuesta).
+Si hay texto real, por ambiguo que sea, elige la combinación más cercana.</pre>
+
+    <h3>Cómo se validó antes de escribir en Salesforce</h3>
+    <p>La etiqueta original no servía como verdad: estaba mal en la mayoría de los casos. Por eso la validación se hizo en capas.</p>
+    <table class="t"><thead><tr><th>Fase</th><th>Muestra</th><th>Qué se midió</th><th>Resultado</th></tr></thead><tbody>
+      <tr><td>Piloto</td><td class="n">193</td><td>Contra la etiqueta original de Salesforce</td><td>39,9 %, bajo a propósito: la etiqueta original es la que estaba mal</td></tr>
+      <tr><td>Escala completa</td><td class="n">2.430</td><td>Contra la auditoría manual (Others, Billing, Recollection)</td><td>«Others»: <b>67,2 % IA frente a 22,2 % humano</b>; distribución de Billing y Recollection calcada a la auditoría</td></tr>
+      <tr><td>Modo sombra en producción</td><td class="n">181</td><td>Revisión caso a caso de cada desacuerdo IA/agente</td><td>IA correcta en el <b>91,2 %</b>, agente en el 6,1 %; en los desacuerdos, la IA tenía razón en el 86,9 %</td></tr>
+      <tr><td>Producción, primeras 31 h</td><td class="n">72</td><td>Confianza y cobertura</td><td>Confianza media 0,965; el 95,8 % de los casos llegaba sin clasificar cuando pasó la IA</td></tr>
+    </tbody></table>
+
+    <div class="bars" aria-label="Acierto en los cajones Others">
+      <div class="bar"><span>Agentes, cajones «Others»</span><div class="track"><div class="fill" style="width:22.2%"></div></div><span class="pct">22,2 %</span></div>
+      <div class="bar ai"><span>Clasificador, mismo bucket</span><div class="track"><div class="fill" style="width:67.2%"></div></div><span class="pct">67,2 %</span></div>
+      <div class="bar ai"><span>Clasificador, calibración en sombra</span><div class="track"><div class="fill" style="width:91.2%"></div></div><span class="pct">91,2 %</span></div>
+    </div>
+
+    <h3>Después del lanzamiento</h3>
+    <ul>
+      <li><b>97–99 % de los emails</b> entrantes se clasifican y enrutan automáticamente; el resto va a revisión manual con una nota.</li>
+      <li>La coincidencia entre lo que pone la IA y lo que ponían los agentes subió del <b>~49 % al ~82 % en diez semanas</b>: el equipo empezó a clasificar con el mismo criterio. En los desacuerdos revisados, la IA tenía razón unas cinco veces por cada una del agente.</li>
+      <li>El día del lanzamiento cambié la política de «no pisar al agente» a <b>«la IA corrige siempre»</b>, tras ver en vivo un caso donde el agente se equivocaba y la IA no. El valor anterior sigue logueado para auditar.</li>
+    </ul>
+  </div>
+</div></section>
+
+<!-- 03 -->
+<section class="ch" id="documentacion"><div class="wrap">
+  <div class="chnum">03 · Responder lo repetitivo · peticiones de documentación</div>
+  <h2>«Mándame mi factura»: identificar al cliente, resolver qué pide exactamente y dejar los PDF preparados</h2>
+  <span class="status"><i></i>En producción: borrador revisado por el agente</span><span class="status test"><i></i>En staging: envío automático con adjuntos</span>
+  <div class="read">
+    <p>Pedir facturas o el contrato es la petición más repetitiva y la más fácil de resolver bien. El subflujo la recibe ya clasificada, identifica la cuenta, decide con IA <i>qué</i> documentos se piden («la última», «las tres últimas», «todas las del gas», «el contrato y la de agosto»), los resuelve con SQL, los descarga del ERP y deja en el caso un borrador de respuesta con el enlace a una carpeta con los PDF.</p>
+    <p>Hay una idea que atraviesa todo el diseño: <b>la IA decide el alcance y redacta, pero el filtrado de datos lo hace SQL y la descarga es mecánica</b>. Así la IA nunca inventa una factura que no existe.</p>
+  </div>
+
+  <div class="flowbox" data-flow="documentacion"></div>
+
+  <div class="read">
+    <div class="codehead"><span>Decisión de alcance (salida del módulo de IA)</span><span>JSON</span></div>
+<pre>{
+  <span class="k">"needs_clarification"</span>:      <span class="n">false</span>,
+  <span class="k">"contracts_in_scope_ids"</span>:   [<span class="s">"&lt;contrato_luz&gt;"</span>, <span class="s">"&lt;contrato_gas&gt;"</span>],
+  <span class="k">"wants_contract"</span>:           <span class="n">false</span>,
+  <span class="k">"invoice_scope"</span>:            <span class="s">"last_n"</span>,       <span class="c">// latest | last_n | last_12_months | none</span>
+  <span class="k">"invoice_count"</span>:            <span class="n">3</span>,
+  <span class="k">"es_cuenta_profesional"</span>:    <span class="n">false</span>,          <span class="c">// comunidades, administradores de fincas, empresas</span>
+  <span class="k">"alcance_amplio_profesional"</span>: <span class="n">false</span>         <span class="c">// "todas las facturas" de una cuenta profesional → humano</span>
+}</pre>
+
+    <div class="codehead"><span>Selección exacta de facturas (abstraído)</span><span>BigQuery SQL</span></div>
+<pre><span class="k">WITH</span> ranked <span class="k">AS</span> (
+  <span class="k">SELECT</span> *, <span class="k">ROW_NUMBER</span>() <span class="k">OVER</span> (
+           <span class="k">PARTITION BY</span> contract_id
+           <span class="k">ORDER BY</span> (pdf_document_id <span class="k">IS NULL</span>), issued_date <span class="k">DESC</span>) <span class="k">AS</span> rn_doc
+  <span class="k">FROM</span> invoices
+  <span class="k">WHERE</span> contract_id <span class="k">IN</span> (<span class="c">/* contratos que eligió la IA */</span>)
+)
+<span class="k">SELECT</span> invoice_id, contract_id, issued_date, pdf_document_id
+<span class="k">FROM</span> ranked
+<span class="k">WHERE</span> rn_doc &lt;= <span class="c">/* invoice_count */</span>   <span class="c">-- o ventana de 12 meses según invoice_scope</span></pre>
+
+    <h4>Reglas que salieron de casos reales</h4>
+    <ul>
+      <li><b>Identificación en cascada:</b> email → DNI → CUPS, con normalización de formato en los dos lados (<code>REGEXP_REPLACE(UPPER(x), '[^A-Z0-9]', '')</code>) y un campo <code>matched_via</code>. Si no es por email, el borrador avisa al agente de que revise.</li>
+      <li><b>Nada de coincidencias aproximadas en identificadores.</b> Un DNI con un dígito de menos va a una persona: adivinarlo puede enviar la factura de alguien a otra persona.</li>
+      <li><b>Titularidad:</b> si la cuenta no se identifica, la nota al agente exige verificar que quien pide es el titular antes de enviar nada.</li>
+      <li><b>Peticiones múltiples:</b> resuelve lo que está en su alcance y reconoce explícitamente lo que no.</li>
+      <li><b>Cuentas profesionales con peticiones amplias</b>: no gasta llamadas a la API y deriva a gestión manual.</li>
+    </ul>
+    <div class="results" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
+      <div><div class="v">~81</div><div class="l">casos en 30 días</div></div>
+      <div><div class="v">100<small> %</small></div><div class="l">con borrador generado</div></div>
+      <div><div class="v">52<small> %</small></div><div class="l">con el documento localizado y subido</div><div class="s">el resto: cuenta no identificada o documento aún no generado</div></div>
+    </div>
+  </div>
+</div></section>
+
+<!-- 04 -->
+<section class="ch" id="cancelacion"><div class="wrap">
+  <div class="chnum">04 · Responder lo repetitivo · cancelaciones</div>
+  <h2>Cancelar no es un cambio de estado: depende de dónde está el contrato frente a la distribuidora</h2>
+  <span class="status shadow"><i></i>Conectado a producción en modo sombra · escritura automática detrás de un flag</span>
+  <div class="read">
+    <p>Una cancelación dentro de los 14 días desde la firma puede ser tres trámites distintos. Si el contrato <b>nunca se envió</b> a la distribuidora, basta con cambiar su estado en el ERP. Si <b>se envió pero no está activo</b>, hay que mandar una anulación. Si <b>ya está activo</b>, es un desistimiento formal. Y si pasaron los 14 días, quizá ya no aplique. La rama se decide leyendo en vivo el estado del contrato y el último proceso ATR intercambiado con la distribuidora.</p>
+    <p>Es el escenario más complejo: <b>49 módulos, con 10 llamadas a la API, 16 bloques de código y 7 llamadas a la IA</b>, con todas las consultas en vivo contra el ERP. Su API no admite JOIN, así que los cruces se encadenan en código.</p>
+  </div>
+
+  <div class="flowbox" data-flow="cancelacion"></div>
+
+  <h3>Prueba la lógica de decisión</h3>
+  <div class="read"><p>Es la misma lógica del módulo <code>clasificar_rama</code>, portada a esta página. Cambia los datos del contrato y mira qué rama sale y quién actúa.</p></div>
+  <div class="sim" id="sim">
+    <div class="in">
+      <label for="s-status">Estado del contrato en el ERP
+        <select id="s-status">
+          <option value="new">new (alta en curso)</option>
+          <option value="activation_process">activation_process</option>
+          <option value="active">active</option>
+          <option value="terminated">terminated / completed / cancelled</option>
+        </select></label>
+      <label for="s-proc">Último proceso de alta con la distribuidora
+        <select id="s-proc">
+          <option value="none">Ninguno (nunca enviado)</option>
+          <option value="Solicitado">Solicitado</option>
+          <option value="Aceptado">Aceptado</option>
+          <option value="Peticion">Petición de información</option>
+          <option value="Rechazado">Rechazado / cancelado</option>
+        </select></label>
+      <label for="s-days">Días desde la firma
+        <input id="s-days" type="number" min="0" max="400" value="6"></label>
+      <label class="chk" for="s-live"><input id="s-live" type="checkbox"> Ya hay una anulación o desistimiento en curso</label>
+      <label class="chk" for="s-shadow"><input id="s-shadow" type="checkbox" checked> Modo sombra activo</label>
+    </div>
+    <div class="out" aria-live="polite">
+      <div class="kicker">Rama</div>
+      <div class="rama" id="s-rama">—</div>
+      <div class="who" id="s-who">—</div>
+      <p id="s-desc" style="font-size:14px;color:var(--ink-2)"></p>
+      <div class="trace" id="s-trace"></div>
+    </div>
+  </div>
+
+  <div class="read">
+    <div class="codehead"><span>Núcleo de clasificar_rama (simplificado)</span><span>JavaScript · módulo Code de Make</span></div>
+<pre><span class="k">const</span> ALTA        = { luz: [<span class="s">"C1"</span>,<span class="s">"C2"</span>,<span class="s">"A3"</span>], gas: [<span class="s">"41"</span>,<span class="s">"38"</span>] };  <span class="c">// códigos ATR regulados</span>
+<span class="k">const</span> DESISTIMIENTO = { luz: [<span class="s">"E1"</span>], gas: [<span class="s">"49"</span>] };
+<span class="k">const</span> PLAZO_DIAS = <span class="n">14</span>;                                           <span class="c">// desde la firma, días naturales</span>
+
+<span class="k">if</span> (tramiteEnCurso(procesos))                 <span class="k">return</span> <span class="s">"ya_en_tramite"</span>;
+<span class="k">if</span> ([<span class="s">"terminated"</span>,<span class="s">"completed"</span>,<span class="s">"cancelled"</span>].includes(status)) <span class="k">return</span> <span class="s">"no_aplica_ya_finalizado"</span>;
+<span class="k">if</span> (status === <span class="s">"active"</span>)
+  <span class="k">return</span> diasDesdeFirma &lt;= PLAZO_DIAS ? <span class="s">"activado_en_plazo"</span> : <span class="s">"fuera_de_plazo"</span>;
+<span class="c">// new / activation_process: mirar el último intento de alta</span>
+<span class="k">const</span> ultimo = ultimaAlta(procesos);
+<span class="k">if</span> (!ultimo || [<span class="s">"Rechazado"</span>,<span class="s">"Cancelado"</span>].includes(ultimo.status)) <span class="k">return</span> <span class="s">"no_enviado"</span>;
+<span class="k">return</span> <span class="s">"enviado_no_activado"</span>;</pre>
+
+    <h4>Endurecimiento antes de conectarlo (tras una revisión de código)</h4>
+    <ul>
+      <li><b>El orden importa:</b> antes se redactaba «tu contrato está cancelado» y después se ejecutaba el PATCH. Ahora va clasificar → PATCH → verificar → redactar, y la IA recibe un <code>patch_status</code> (<code>ejecutado / gateado / fallido</code>).</li>
+      <li><b>Un error de la API no es «no encontrado».</b> Un 5xx devolvía <code>[]</code> igual que una búsqueda vacía. Ahora devuelve <code>null</code> y propaga un flag <code>api_error</code>; cada router tiene una rama de error técnico que va a revisión humana.</li>
+      <li><b>Inyección:</b> lo que escribe el cliente (DNI, CUPS, nº de contrato) entraba directo en la query. Ahora un módulo de validación lo comprueba con regex (DNI/NIE con letra verificada, CUPS <code>ES</code>+18–20, contrato) y descarta lo que no cumple el formato.</li>
+      <li><b>La IA no elige qué contrato cancelar.</b> En las cuentas con varios contratos, el código recalcula de forma determinista si hay exactamente una coincidencia. Si la IA dice «resuelto» y el código no lo confirma, se pide aclaración.</li>
+      <li><b>Shadow gate:</b> un único booleano hace que el PATCH apunte a un id inocuo. El flujo corre completo, pero no escribe hasta que se decida.</li>
+    </ul>
+  </div>
+</div></section>
+
+<!-- 05 -->
+<section class="ch" id="voz"><div class="wrap">
+  <div class="chnum">05 · El mismo criterio, en el teléfono</div>
+  <h2>Un agente de voz que sustituye al menú de teclas: identifica, entiende, crea el caso clasificado y transfiere</h2>
+  <span class="status"><i></i>En producción fuera de horario</span><span class="status test"><i></i>Flujo completo en horario: listo, a la espera de la nueva cola de telefonía</span>
+  <div class="read">
+    <p>El IVR de seis opciones obligaba al cliente a elegir un número que no sabía cuál era. El agente de ElevenLabs lo sustituye: reconoce al cliente por el teléfono <b>antes de saludar</b>, entiende el motivo en lenguaje natural, crea el caso en Salesforce <b>con el mismo rulebook del clasificador de email</b> y termina transfiriendo con un resumen hablado al compañero, o agendando una llamada de vuelta.</p>
+  </div>
+
+  <div class="arch">
+    <div><h5>Antes de saludar · ~2,5 s</h5><ol>
+      <li>Webhook de inicio → escenario de Make</li>
+      <li>BigQuery: ¿de quién es este teléfono?</li>
+      <li>Horario de Madrid + festivos</li>
+      <li>API de telefonía: ¿hay agentes libres en la cola?</li>
+      <li>Devuelve variables dinámicas al agente</li>
+    </ol></div>
+    <div><h5>Durante la llamada</h5><ol>
+      <li>Aviso legal + motivo en lenguaje natural</li>
+      <li>Si no se identificó: pide DNI → búsqueda</li>
+      <li>Turno de confirmación hablado («Entonces, … ¿es así?»)</li>
+      <li><code>crear_caso_ivr</code> → caso clasificado, <b>siempre</b></li>
+    </ol></div>
+    <div><h5>Dos finales posibles</h5><ol>
+      <li>Abierto y con agentes → transferencia en conferencia con resumen hablado</li>
+      <li>Abierto sin agentes → el cliente elige esperar o que le llamen</li>
+      <li>Cerrado → callback agendado sobre el <b>mismo</b> caso</li>
+    </ol></div>
+  </div>
+
+  <div class="flowbox" data-flow="voz"></div>
+
+  <div class="read">
+    <h4>Decisiones de diseño</h4>
+    <ul>
+      <li><b>Los valores por defecto fallan hacia lados opuestos, a propósito.</b> Si el webhook no responde, <code>dentro_de_horario = cerrado</code> (un callback de más molesta; transferir a una cola cerrada pierde al cliente) y <code>agentes_disponibles = si</code> (negarlo mandaría a esperar a todos durante una caída de la telefonía).</li>
+      <li><b>Los escenarios que escriben responden antes de escribir.</b> El agente no espera a Salesforce: así se eliminaron 7 s de silencio en mitad de la llamada.</li>
+      <li><b>Un almacén por <code>conversation_id</code></b> hila los escenarios: el de crear caso deja el id y el de agendar lo actualiza en vez de crear un duplicado.</li>
+      <li><b>El caso se crea antes de cerrar la llamada.</b> Si se corta a mitad, queda rastro y el cliente no empieza de cero.</li>
+      <li><b>El turno de confirmación nació de dos llamadas reales mal transcritas.</b> Reescribir la regla en prosa no lo arregló; obligar a confirmar sí.</li>
+      <li><b>Festivos con fecha de caducidad</b> y un test que falla cuando la lista se queda corta. Nació de un festivo nacional en el que el IVR dio por abierto el servicio.</li>
+    </ul>
+
+    <h4>Cómo se mide</h4>
+    <p>Una suite de <b>48 casos</b> contra la API de simulación, con las herramientas simuladas, siempre con dos pasadas. Cada caso se evalúa con reglas deterministas (qué herramienta se llamó, en qué orden y con qué clasificación) y con un criterio en lenguaje natural que juzga un LLM. Esa misma suite decidió el modelo:</p>
+    <table class="t"><thead><tr><th>Modelo</th><th>Casos superados (46)</th><th>Fuera de horario (9)</th><th>Lectura</th></tr></thead><tbody>
+      <tr><td>gpt-5.2</td><td class="n">39</td><td class="n">7</td><td>Lee las variables de horario aunque el prompt sea largo</td></tr>
+      <tr><td>claude-haiku-4.5</td><td class="n">22</td><td class="n">0</td><td>Igual de bueno clasificando, pero transfiere a cualquier hora</td></tr>
+    </tbody></table>
+    <div class="results" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
+      <div><div class="v">36<small> s</small></div><div class="l">de descolgar a transferir, medido de punta a punta</div></div>
+      <div><div class="v">~16<small> s</small></div><div class="l">desde que el cliente explica el motivo</div></div>
+      <div><div class="v">53k</div><div class="l">caracteres de prompt, versionado en Git y publicado por script</div></div>
+    </div>
+  </div>
+</div></section>
+
+<!-- 06 -->
+<section class="ch" id="integraciones"><div class="wrap">
+  <div class="chnum">06 · Integraciones</div>
+  <h2>Todas las llamadas e interacciones, flujo por flujo</h2>
+  <div class="read"><p>Las rutas son genéricas y los nombres de tabla están abstraídos, pero el método, el tipo de operación y la secuencia son los reales.</p></div>
+  <div class="tablewrap"><table class="t" id="apitable"><thead><tr><th>Flujo</th><th>#</th><th>Sistema</th><th>Operación</th><th>Llamada</th><th>Para qué</th></tr></thead><tbody></tbody></table></div>
+</div></section>
+
+<!-- 07 -->
+<section class="ch" id="criterio"><div class="wrap">
+  <div class="chnum">07 · Cómo construyo</div>
+  <h2>Principios, y lo que aprendí rompiendo cosas</h2>
+  <div class="read">
+    <ul>
+      <li><b>Medir antes de automatizar.</b> El análisis de 4.714 emails decidió qué construir y en qué orden.</li>
+      <li><b>Modo sombra siempre.</b> Cada flujo corrió escribiendo en una hoja de calibración antes de tocar Salesforce o el ERP, y sigue logueando en paralelo una vez en producción.</li>
+      <li><b>La IA decide donde hay lenguaje; el código, donde hay reglas.</b> Alcance y redacción, con IA. Filtrar facturas, elegir el contrato a cancelar o validar un DNI, con SQL o código determinista.</li>
+      <li><b>Las personas se quedan donde hay riesgo.</b> Cancelar un contrato activo, enviar documentos a quien no es el titular o resolver una cuenta ambigua pasan siempre por un agente.</li>
+      <li><b>Nunca afirmar lo que el sistema no puede confirmar.</b> Los textos van en presente de trámite hasta que la acción se ha ejecutado de verdad.</li>
+    </ul>
+  </div>
+  <div class="lessons">
+    <div><span class="tag">Make · polling</span><b>Cambiar la conexión reinicia el punto de partida</b><p>Al migrar el escenario de equipo, el trigger volvió a leer casos de hace dos años. Desde entonces lleva un suelo de fecha fijo, además del <code>orderDate</code>.</p></div>
+    <div><span class="tag">Make · IA</span><b>La salida estructurada va anidada</b><p>Las columnas de predicción salían vacías: los campos viven en <code>jsonResponse.*</code>, no al primer nivel del bundle.</p></div>
+    <div><span class="tag">Salesforce</span><b>Un update que no actualiza</b><p>El módulo de actualización ignoraba los campos en silencio porque tenían que ir dentro de <code>fields:{}</code>. Lo encontré comparándolo con un blueprint que funcionaba.</p></div>
+    <div><span class="tag">Make · subescenarios</span><b>Dos interfaces distintas</b><p>Un subflujo construido por API recibía todos los campos vacíos: faltaba registrar la interfaz a nivel de escenario, no solo en el módulo de entrada.</p></div>
+    <div><span class="tag">Idempotencia</span><b>Un 502 no significa que no se ejecutó</b><p>Un reintento tras un error ambiguo duplicó una nota. Ahora reviso el historial de ejecuciones antes de reintentar.</p></div>
+    <div><span class="tag">Gemini</span><b>Cuota y timeouts</b><p>Un 429 de cuota y timeouts puntuales: el trigger retiene el backlog y la siguiente ejecución lo procesa sin perder casos.</p></div>
+    <div><span class="tag">ERP</span><b>Sin JOIN</b><p>La API de consultas rechaza JOIN, subconsultas y UNION. Los cruces CUPS → punto de suministro → contrato → cuenta se encadenan en consultas secuenciales y código.</p></div>
+    <div><span class="tag">Voz</span><b>Un fallo que parecía éxito</b><p>El lector de disponibilidad buscaba el dato en una ruta equivocada y, como falla hacia «sí», todo parecía funcionar. Ahora busca por id de cola y tiene 22 tests contra la respuesta real.</p></div>
+  </div>
+</div></section>
+
+<!-- 08 -->
+<section class="ch" id="rol"><div class="wrap">
+  <div class="chnum">08 · Qué hice yo</div>
+  <h2>Mi parte, con precisión</h2>
+  <div class="read">
+    <table class="t"><thead><tr><th>Pieza</th><th>Mi parte</th></tr></thead><tbody>
+      <tr><td>Análisis y rulebook</td><td>Entero: extracción, auditorías, taxonomía, reglas y calibraciones manuales.</td></tr>
+      <tr><td>Clasificador</td><td>Entero: diseño, prompt, escenario de Make, modo sombra, calibración, lanzamiento y adopción con el equipo de atención al cliente.</td></tr>
+      <tr><td>Respuesta a peticiones de documentación</td><td>Entero: identificación, decisión de alcance, SQL, descarga, borrador, reglas de titularidad y cuentas profesionales. Ahora pruebo en staging el envío automático con adjuntos.</td></tr>
+      <tr><td>Respuesta a cancelaciones</td><td>Entero: árbol de decisión, construcción, endurecimiento y modo sombra. Para leer los procesos ATR reutilicé la lógica de los escenarios de autoservicio por voz que construimos en el equipo.</td></tr>
+      <tr><td>Agente de voz</td><td>Proyecto conjunto desde cero con un compañero de automatización. Tras su salida soy el responsable: ajusto el prompt, amplío la suite de evaluación, pruebo con llamadas reales y coordino con telefonía el paso del flujo completo a producción.</td></tr>
+    </tbody></table>
+    <p>Trabajo con IA también para construir: Claude Code en VS Code como copiloto para generar blueprints, scripts de evaluación y tests. Las decisiones de diseño, la calibración y el criterio de qué automatizar y qué no son míos.</p>
+  </div>
+</div></section>
+
+</main>
+
+<footer><div class="wrap">Ilan Rubin · Barcelona</div></footer>
+
+<script>
+/* ===== datos de los flujos (reconstruidos) ===== */
+const APPS = {
+  sf:{c:'var(--app-sf)',t:'SF',n:'Salesforce'}, ai:{c:'var(--app-ai)',t:'AI',n:'Gemini'},
+  sheets:{c:'var(--app-sheets)',t:'GS',n:'Google Sheets'}, bq:{c:'var(--app-bq)',t:'BQ',n:'BigQuery'},
+  http:{c:'var(--app-http)',t:'API',n:'HTTP'}, code:{c:'var(--app-code)',t:'{ }',n:'Code (JS)'},
+  router:{c:'var(--app-router)',t:'⑂',n:'Router'}, drive:{c:'var(--app-drive)',t:'GD',n:'Google Drive'},
+  flow:{c:'var(--app-flow)',t:'↳',n:'Subescenario'}, iter:{c:'#3949ab',t:'⟳',n:'Iterador'},
+  ds:{c:'var(--app-ds)',t:'DS',n:'Data store'}, tel:{c:'var(--app-tel)',t:'☎',n:'Telefonía'},
+  el:{c:'#111',t:'11',n:'ElevenLabs'}, hook:{c:'#c0392b',t:'⚡',n:'Webhook'}, sys:{c:'var(--app-sys)',t:'⨯',n:'Error handler'}
+};
+const M = (app,label,d={}) => ({app,label,...d});
+
+const FLOWS = {
+ clasificador:{
+  title:'Clasificador y enrutador', sub:'escenario programado · cada 5 min',
+  chain:[
+   M('sf','Watch Cases',{call:'SOQL · Case WHERE Origin = email AND mercado = ES AND CreatedDate >= suelo',what:'Trae solo los casos nuevos de email del mercado español. orderDate: CreatedDate avanza solo; el suelo de fecha protege contra reinicios del punto de partida.',out:'Subject, Description (texto del email), OwnerId, Reason actual'}),
+   M('ai','Clasificar motivo',{filter:'doble check RecordType + Origin',call:'Gemini 3.5 Flash · razonamiento bajo · salida estructurada',what:'Rulebook completo en el system prompt. Entrada: asunto + cuerpo.',out:'reason, subreason, confidence, rationale',why:'El filtro previo repite la condición del trigger porque el AND del conector no siempre se aplicaba.',
+     onerror:[M('sheets','Log del error',{what:'Registra el caso que falló para revisarlo.'}),M('sf','Nota en el caso',{call:'POST FeedItem',what:'Deja visible en Salesforce que la IA no pudo clasificar.'}),M('sys','Ignore',{what:'El escenario sigue con el siguiente caso en vez de pararse.'})]}),
+   M('sheets','Log de calibración',{what:'Una fila por caso: predicción + lo que tenía el agente en ese momento.',why:'Permite seguir auditando IA frente a agente después del lanzamiento.'}),
+   M('router','Router',{routes:[
+     {f:'fiable → escribir',chain:[M('sf','Update Case',{call:'PATCH Case { fields: { Reason, SubReason, OwnerId } }',what:'Escribe el motivo y corrige al agente si hace falta.',why:'Nunca toca Status. OwnerId viaja explícito: si no, Salesforce reasigna el caso.'})]},
+     {f:'UNCLEAR → revisión',chain:[M('sf','Nota interna',{call:'POST FeedItem (TextPost)',what:'«Sin contenido interpretable, requiere revisión manual» + motivo.',why:'Distingue «la IA lo miró y no había nada» de «nadie lo tocó».'})]},
+     {f:'Documentation Request',chain:[M('flow','Subflujo documentación',{call:'CallSubscenario (asíncrono)',what:'Envía case_id, nº de caso, email, asunto y cuerpo al subflujo del capítulo 03.'})]},
+     {f:'Cancellation',chain:[M('flow','Subflujo cancelación',{call:'CallSubscenario (asíncrono)',what:'Mismo contrato de entrada, hacia el subflujo del capítulo 04.'})]}
+   ]})
+  ]},
+ documentacion:{
+  title:'Subflujo · Peticiones de documentación', sub:'invocado por el clasificador',
+  chain:[
+   M('flow','Entrada',{what:'Interfaz: case_id, case_number, supplied_email, subject, description.',out:'Salida: documento_status, agent_summary, response_text'}),
+   M('ai','Extraer identificadores',{call:'Gemini 3.1 Flash-Lite',what:'Saca DNI, CUPS y nº de contrato tal cual los escribió el cliente.',why:'Copiados literalmente, nunca corregidos: un dato inventado es peor que uno vacío.'}),
+   M('bq','Cuenta y contratos',{call:'SQL · match por email OR DNI OR CUPS (normalizados) → matched_via',what:'Devuelve la cuenta, todos sus contratos (tipo, CUPS, dirección, estado) y una lista agregada para la IA.'}),
+   M('router','Router',{routes:[
+     {f:'cuenta encontrada',chain:[
+       M('ai','Decidir alcance',{call:'Gemini 3.5 Flash',what:'Qué contratos, cuántas facturas, si quiere el contrato, si hace falta repreguntar, si es cuenta profesional.',out:'contracts_in_scope_ids, invoice_scope, invoice_count, wants_contract…'}),
+       M('router','Router',{routes:[
+         {f:'necesita aclaración',chain:[M('sheets','Log'),M('sf','Borrador: repregunta',{call:'POST FeedItem',what:'Pide un dato concreto (CUPS, dirección, tipo de suministro), nunca una pregunta genérica.'})]},
+         {f:'profesional + amplio',chain:[M('sheets','Log'),M('sf','Derivar a humano',{call:'POST FeedItem',what:'Acuse de recibo y gestión manual. No crea carpeta ni llama a la API.'})]},
+         {f:'alcance resuelto',chain:[
+           M('drive','Crear carpeta',{call:'Drive · create folder (lectura en el dominio)',what:'Una carpeta por caso; devuelve el enlace en la misma respuesta.'}),
+           M('bq','Facturas exactas',{call:'SQL · ROW_NUMBER() por contrato',what:'Trae exactamente las facturas pedidas que tienen documento.',why:'El filtrado lo hace SQL, no un iterador con filtros en Make.'}),
+           M('ai','Redactar borrador',{call:'Gemini 3.5 Flash',what:'Sabe cuántos documentos hay antes de descargar: si son menos de los pedidos, lo dice.',out:'response_text, agent_summary'}),
+           M('sheets','Log de calibración'),
+           M('router','Router',{routes:[
+             {f:'facturas',chain:[M('iter','Iterador'),M('http','Descargar PDF',{call:'GET /document?fn={id}',what:'Descarga cada factura del ERP.'}),M('drive','Subir a carpeta')]},
+             {f:'contrato pedido',chain:[M('iter','Iterador'),M('http','Buscar documento',{call:'GET /query?q=SELECT id FROM document WHERE related_record_id = {contrato}',what:'El documento es polimórfico: cuelga de contrato o de factura.'}),M('router','¿existe?',{routes:[{f:'encontrado',chain:[M('http','Descargar PDF',{call:'GET /document?fn={id}'}),M('drive','Subir a carpeta')]}]})]},
+             {f:'publicar',chain:[M('sf','Borrador + enlace',{call:'POST FeedItem (LinkPost, interno)',what:'Texto de la respuesta + enlace a la carpeta. El agente revisa y envía desde Salesforce, lo que mantiene el hilo del caso.'})]}
+           ]})
+         ]}
+       ]})
+     ]},
+     {f:'cuenta no encontrada',chain:[M('ai','Pedir identificación',{call:'Gemini 3.5 Flash',what:'Pide DNI/NIF, CUPS o nº de contrato sin asumir el tipo de suministro.'}),M('sheets','Log'),M('sf','Borrador + aviso',{call:'POST FeedItem',what:'Incluye la regla de titularidad: verificar que es el titular antes de enviar nada.'})]}
+   ]})
+  ]},
+ cancelacion:{
+  title:'Subflujo · Cancelaciones', sub:'invocado por el clasificador · todo en vivo contra el ERP',
+  chain:[
+   M('flow','Entrada',{what:'Mismo contrato de interfaz que el subflujo de documentación.'}),
+   M('ai','Extraer identificadores',{call:'Gemini 3.1 Pro',what:'DNI, CUPS y nº de contrato mencionados.'}),
+   M('code','Validar identificadores',{what:'Regex de DNI/NIE con letra de control, CUPS ES+18–20 y nº de contrato; escapa comillas del email.',why:'Lo que no cumple el formato nunca llega a una query (anti-inyección).'}),
+   M('http','Cuenta por email/DNI',{call:'GET /query?q=SELECT id, document_number, email, full_name FROM account WHERE email = {x} OR document_number = {x}'}),
+   M('code','Resolver cuenta',{what:'Prioriza email sobre DNI. Distingue «sin resultados» ([]) de «error de API» (null).'}),
+   M('http','Por nº de contrato',{call:'GET /query?q=SELECT id, customer_id FROM contract WHERE contract_code = {x}'}),
+   M('code','Normalizar'),
+   M('http','Por CUPS',{call:'GET /query?q=SELECT id FROM supply_point WHERE cups = {x}'}),
+   M('code','Normalizar'),
+   M('http','Contrato del suministro',{call:'GET /query?q=SELECT customer_id FROM contract WHERE supply_point_id = {x}',why:'Sin JOIN en la API: la cadena CUPS → suministro → contrato → cuenta se resuelve paso a paso.'}),
+   M('code','Normalizar'),
+   M('code','Resolver cliente final',{what:'Prioridad: email/DNI > CUPS > contrato.'}),
+   M('http','Confirmar cuenta',{call:'GET /query?q=SELECT … FROM account WHERE id = {x}'}),
+   M('code','Cuenta definitiva',{out:'encontrada, customer_id, matched_via, api_error'}),
+   M('router','Router',{routes:[
+     {f:'error técnico',chain:[M('sheets','Log · revisión humana')]},
+     {f:'no encontrada',chain:[M('ai','Pedir identificación'),M('sheets','Log')]},
+     {f:'cuenta encontrada',chain:[
+       M('http','Contratos de la cuenta',{call:'GET /query?q=SELECT id, contract_code, service_type, contract_status, contract_signature_date, … FROM contract WHERE customer_id = {x}'}),
+       M('code','Días desde firma',{what:'Lista de contratos + días naturales desde la firma por contrato.'}),
+       M('router','Router',{routes:[
+         {f:'un contrato',chain:[
+           M('http','Procesos ATR',{call:'GET /query?q=SELECT process_code, status, last_communication_date, incidents FROM atr_process WHERE contract_id = {x} AND process_code IN (C1,C2,A3,M1,E1,03,38,41,05,49)'}),
+           M('code','clasificar_rama',{what:'Decide la rama (ver simulador).',out:'rama, dias_desde_firma, estado_solicitud, flag de sombra'}),
+           M('router','Router',{routes:[
+             {f:'error técnico',chain:[M('sheets','Log')]},
+             {f:'no_enviado',chain:[M('code','Shadow gate',{what:'Si MODO_SHADOW está activo, el id del PATCH apunta a un valor inocuo.'}),M('http','Cancelar en ERP',{call:'PATCH /contract/ { id, contract_status: "cancelled" }',what:'Único caso que se resuelve sin humano: el contrato nunca salió hacia la distribuidora.'}),M('code','Verificar resultado',{out:'patch_status: ejecutado | gateado | fallido'}),M('ai','Redactar',{what:'Redacta según lo que pasó de verdad, no según lo que se intentó.'}),M('sheets','Log')]},
+             {f:'otras ramas',chain:[M('ai','Redactar + nota interna',{what:'Anulación, desistimiento, fuera de plazo o ya en trámite: borrador neutro y nota con la acción recomendada para el agente.'}),M('sheets','Log')]}
+           ]})
+         ]},
+         {f:'varios contratos',chain:[
+           M('ai','Desambiguar',{out:'resuelto, ref_resuelta, tipo_mencionado'}),
+           M('code','Verificar resolución',{what:'Recalcula de forma determinista si hay exactamente un contrato compatible.',why:'Si la IA dice «resuelto» y el código no lo confirma, se pide aclaración.'}),
+           M('router','Router',{routes:[
+             {f:'resuelto',chain:[M('code','Preparar'),M('http','Procesos ATR'),M('code','clasificar_rama'),M('router','Router',{routes:[{f:'error técnico',chain:[M('sheets','Log')]},{f:'no_enviado',chain:[M('code','Shadow gate'),M('http','Cancelar en ERP',{call:'PATCH /contract/'}),M('code','Verificar'),M('ai','Redactar'),M('sheets','Log')]},{f:'otras ramas',chain:[M('ai','Redactar'),M('sheets','Log')]}]})]},
+             {f:'no resuelto',chain:[M('sheets','Log · pedir aclaración')]}
+           ]})
+         ]},
+         {f:'sin contratos',chain:[M('sheets','Log')]}
+       ]})
+     ]}
+   ]})
+  ]},
+ voz:{
+  title:'Agente de voz · orquestación', sub:'ElevenLabs + 4 escenarios de Make vía webhooks',
+  chain:[
+   M('tel','Llamada entrante',{what:'El IVR redirige al número del agente.'}),
+   M('hook','Webhook de inicio',{call:'POST → escenario de precarga',what:'Antes de saludar.'}),
+   M('bq','¿Quién llama?',{call:'SQL · teléfono → cuenta, contrato',out:'sf_account_id, sf_account_name, sf_opportunity_id'}),
+   M('code','Horario y festivos',{what:'Ventanas de servicio y de agendado en hora de Madrid; festivos antes que el día de la semana.',out:'dentro_de_horario, festivos_caducados'}),
+   M('http','Agentes libres',{call:'POST API de estadísticas en tiempo real de la telefonía',what:'Lee numberOfAgentsAvailable de la fila de nuestra cola.',out:'agentes_disponibles'}),
+   M('el','Agente de voz',{call:'gpt-5.2 · temp 0.2 · STT en tiempo real · voz v3',what:'Prompt de 53k caracteres con el rulebook de clasificación. Las herramientas no son interrumpibles mientras escriben.'}),
+   M('router','Herramientas',{routes:[
+     {f:'no identificado',chain:[M('hook','lookup por DNI'),M('sf','Buscar ficha',{call:'Salesforce · cuenta por DNI/NIE'})]},
+     {f:'crear_caso_ivr',chain:[M('hook','Webhook'),M('code','Responder al agente',{what:'Responde en ~1,5 s, antes de escribir.'}),M('sf','Crear caso clasificado',{call:'POST Case { Reason, SubReason, descripción, cuenta }',what:'Pareja inválida → Service Management/Others con [REVISAR] en el asunto.'}),M('ds','Guardar sf_case_id',{what:'Clave: conversation_id.'})]},
+     {f:'transfer_to_number',chain:[M('tel','Conferencia',{what:'El compañero oye un resumen hablado antes de que entre el cliente. Nunca si está cerrado.'})]},
+     {f:'agendar_callback_ivr',chain:[M('hook','Webhook'),M('ds','Leer sf_case_id'),M('sf','Actualizar el mismo caso'),M('tel','Alta del callback',{what:'Cita en la ventana de agendado.'})]}
+   ]})
+  ]}
+};
+
+/* ===== render ===== */
+let uid=0;
+function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function renderChain(chain,ctx,first=true){
+  const el=document.createElement('div'); el.className='chain';
+  chain.forEach((m,i)=>{
+    const wrap=document.createElement('div'); wrap.className='mod';
+    if(!(first&&i===0)){const w=document.createElement('div');w.className='wire'+(m.filter?' dot':'');if(m.filter)w.title='Filtro: '+m.filter;wrap.appendChild(w)}
+    const col=document.createElement('div');
+    const n=document.createElement('button'); n.type='button'; n.className='node';
+    const a=APPS[m.app]; m._n=ctx.err?('e'+(++ctx.e)):++ctx.n; m._id='m'+(++uid);
+    n.innerHTML=`<span class="disc" style="background:${a.c}"><b>${a.t}</b><span class="idx">${m._n}</span>${m.onerror?'<span class="err">ERR</span>':''}</span><span class="lbl">${esc(m.label)}</span><span class="app">${esc(a.n)}</span>`;
+    n.addEventListener('click',()=>ctx.select(m,n));
+    n.setAttribute('aria-label',`${m._n}. ${m.label} (${a.n})`);
+    col.appendChild(n);
+    if(m.onerror){const eb=document.createElement('div');eb.className='errbranch';eb.innerHTML='<span class="elbl">on error</span>';ctx.err=true;eb.appendChild(renderChain(m.onerror,ctx,true));ctx.err=false;col.appendChild(eb);ctx.hasErr=true}
+    wrap.appendChild(col); el.appendChild(wrap);
+    if(m.routes){
+      const rs=document.createElement('div'); rs.className='routes';
+      m.routes.forEach(r=>{const ro=document.createElement('div');ro.className='route';const fl=document.createElement('div');fl.className='fl funnel';fl.innerHTML=`<span title="${esc(r.f)}">${esc(r.f)}</span>`;ro.appendChild(fl);ro.appendChild(renderChain(r.chain,ctx,true));rs.appendChild(ro)});
+      wrap.appendChild(rs);
+    }
+  });
+  return el;
+}
+function count(chain,acc={mods:0,http:0,ai:0,code:0,routers:0}){chain.forEach(m=>{acc.mods++;if(m.app==='http')acc.http++;if(m.app==='ai'||m.app==='el')acc.ai++;if(m.app==='code')acc.code++;if(m.app==='router')acc.routers++;if(m.onerror)count(m.onerror,acc);(m.routes||[]).forEach(r=>count(r.chain,acc))});return acc}
+const MODNAME={sf:'salesforce',ai:'ai-agent:RunAIAgent',sheets:'google-sheets:addRow',bq:'google-bigquery:query',http:'http:MakeRequest',code:'code:ExecuteCode',router:'builtin:BasicRouter',drive:'google-drive',flow:'scenario-service',iter:'builtin:BasicFeeder',ds:'datastore',tel:'telephony',el:'elevenlabs:agent',hook:'gateway:CustomWebHook',sys:'builtin:Ignore'};
+function toBlueprint(chain){return chain.map(m=>{const o={id:m._n,module:MODNAME[m.app],label:m.label};if(m.filter)o.filter={name:m.filter};if(m.call)o.call=m.call;if(m.onerror)o.onerror=toBlueprint(m.onerror);if(m.routes)o.routes=m.routes.map(r=>({filter:r.f,flow:toBlueprint(r.chain)}));return o})}
+
+document.querySelectorAll('.flowbox').forEach(box=>{
+  const key=box.dataset.flow, F=FLOWS[key];
+  const ctx={n:0,e:0,err:false};
+  box.innerHTML=`<div class="flowbar"><div class="ttl">${esc(F.title)}<span class="mono">${esc(F.sub)}</span></div><div class="tools"><span class="zoom" role="group" aria-label="Zoom"><button class="btn" type="button" data-z="fit">Vista completa</button><button class="btn" type="button" data-z="0.8">80 %</button><button class="btn" type="button" data-z="1">100 %</button></span><button class="btn" type="button" data-act="bp" aria-pressed="false" aria-expanded="false">Ver blueprint (JSON) ↓</button></div></div><div class="flowgrid"><div class="canvas" tabindex="0" aria-label="Lienzo del escenario"></div><aside class="inspector"><p class="empty">Haz clic en cualquier módulo para ver qué hace, qué llamada ejecuta y por qué está ahí.</p></aside></div><div class="blueprint"><div class="codehead" style="margin:0;padding:8px 14px"><span>Blueprint reconstruido · estructura real del escenario, nombres abstraídos</span><span>JSON</span></div><pre></pre></div>`;
+  const canvas=box.querySelector('.canvas'), insp=box.querySelector('.inspector');
+  let selBtn=null;
+  ctx.select=(m,btn)=>{
+    if(selBtn)selBtn.classList.remove('sel'); selBtn=btn; btn.classList.add('sel');
+    const a=APPS[m.app];
+    insp.innerHTML=`<div class="h"><span class="sw" style="background:${a.c}"></span><div><div class="ttl">${m._n}. ${esc(m.label)}</div><div class="ap">${esc(a.n)}</div></div></div><dl>
+      ${m.filter?`<div><dt>Filtro de entrada</dt><dd>${esc(m.filter)}</dd></div>`:''}
+      ${m.call?`<div><dt>Llamada / configuración</dt><dd><code>${esc(m.call)}</code></dd></div>`:''}
+      ${m.what?`<div><dt>Qué hace</dt><dd>${esc(m.what)}</dd></div>`:''}
+      ${m.out?`<div><dt>Salida</dt><dd><code>${esc(m.out)}</code></dd></div>`:''}
+      ${m.why?`<div><dt>Por qué</dt><dd>${esc(m.why)}</dd></div>`:''}
+      ${m.routes?`<div><dt>Rutas</dt><dd>${m.routes.map(r=>esc(r.f)).join(' · ')}</dd></div>`:''}
+      ${m.onerror?`<div><dt>Gestión de errores</dt><dd>Ruta de error propia: ${m.onerror.map(x=>esc(x.label)).join(' → ')}</dd></div>`:''}
+      ${!m.what&&!m.call&&!m.out?`<div><dd class="empty">Módulo auxiliar del flujo.</dd></div>`:''}
+    </dl>`;
+  };
+  canvas.appendChild(renderChain(F.chain,ctx,true)); if(ctx.hasErr) canvas.classList.add('has-err');
+  canvas.querySelectorAll('.routes').forEach(rs=>{const rts=[...rs.children].filter(c=>c.classList.contains('route'));const last=rts[rts.length-1];const sp=document.createElement('div');sp.className='spine';sp.style.height=(last.offsetTop+33)+'px';rs.prepend(sp)});
+  canvas.querySelectorAll('.errbranch').forEach(eb=>{const col=eb.parentElement;col.style.minWidth=(eb.scrollWidth-40)+'px';const ln=document.createElement('div');ln.style.cssText='position:absolute;top:31px;left:96px;right:0;height:2px;background:var(--ink-3);opacity:.45';col.appendChild(ln);});
+  const c=count(F.chain);
+  const stats=document.createElement('div'); stats.className='legend'; stats.style.padding='0 14px 12px';
+  const pl=(n,a,b)=>`${n} ${n===1?a:b}`;
+  stats.innerHTML=`<span class="mono">${pl(c.mods,'módulo','módulos')} · ${pl(c.routers,'router','routers')} · ${pl(c.http,'llamada HTTP','llamadas HTTP')} · ${pl(c.ai,'módulo de IA','módulos de IA')} · ${pl(c.code,'bloque de código','bloques de código')}</span>`;
+  box.querySelector('.flowbar').after(stats);
+  const chainEl=canvas.firstElementChild;
+  let mode='fit';
+  const applyZoom=()=>{let v=+mode;
+    if(mode==='fit'){chainEl.style.zoom=1;const avail=canvas.clientWidth-56;v=Math.max(.2,Math.min(1,avail/chainEl.scrollWidth));}
+    chainEl.style.zoom=v;box.querySelectorAll('[data-z]').forEach(o=>o.setAttribute('aria-pressed',o.dataset.z===mode));};
+  box._fit=()=>{mode='fit';applyZoom()};
+  box.querySelectorAll('[data-z]').forEach(z=>z.addEventListener('click',()=>{mode=z.dataset.z;applyZoom()}));
+  window.addEventListener('resize',()=>{if(mode==='fit')applyZoom()});
+  const bp=box.querySelector('.blueprint'), btn=box.querySelector('[data-act=bp]');
+  btn.addEventListener('click',()=>{const on=!bp.classList.contains('on');bp.classList.toggle('on',on);btn.setAttribute('aria-pressed',on);btn.setAttribute('aria-expanded',on);btn.textContent=on?'Ocultar blueprint ↑':'Ver blueprint (JSON) ↓';
+    if(on&&!bp.dataset.done){bp.querySelector('pre').textContent=JSON.stringify({name:F.title,flow:toBlueprint(F.chain)},null,2);bp.dataset.done=1}
+    if(on)bp.scrollIntoView({behavior:'smooth',block:'nearest'});});
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{if(mode==='fit')applyZoom()});
+
+  /* selecciona el primer módulo con detalle */
+  const first=canvas.querySelector('.node'); if(first) first.click(); if(first) first.blur();
+  requestAnimationFrame(()=>box._fit());
+});
+
+/* ===== tabla de integraciones ===== */
+const API=[
+ ['Clasificador','Salesforce','Lectura','SOQL Case (trigger, cada 5 min)','Casos nuevos de email'],
+ ['Clasificador','Gemini','Inferencia','AI Agent · salida estructurada','Motivo, submotivo, confianza'],
+ ['Clasificador','Google Sheets','Escritura','addRow','Calibración IA frente a agente'],
+ ['Clasificador','Salesforce','Escritura','PATCH Case { Reason, SubReason, OwnerId }','Escribir la clasificación'],
+ ['Clasificador','Salesforce','Escritura','POST FeedItem','Nota de revisión manual / error'],
+ ['Clasificador','Make','Orquestación','CallSubscenario ×2','Enrutar a documentación o cancelación'],
+ ['Documentación','Gemini','Inferencia','AI Agent ×3 (extraer, alcance, redactar)','Identificadores, alcance, borrador'],
+ ['Documentación','BigQuery','Lectura','SQL cuenta + contratos','Identificar por email, DNI o CUPS'],
+ ['Documentación','BigQuery','Lectura','SQL facturas (ROW_NUMBER)','Seleccionar documentos exactos'],
+ ['Documentación','ERP','Lectura','GET /query (document por related_record_id)','Localizar el PDF del contrato'],
+ ['Documentación','ERP','Lectura','GET /document?fn={id}','Descargar PDF'],
+ ['Documentación','Google Drive','Escritura','create folder · upload file','Carpeta por caso con los documentos'],
+ ['Documentación','Salesforce','Escritura','POST FeedItem (LinkPost, interno)','Borrador + enlace para el agente'],
+ ['Cancelación','Gemini','Inferencia','AI Agent (extraer, desambiguar, redactar)','Identificadores, contrato, borrador'],
+ ['Cancelación','ERP','Lectura','GET /query account (email | DNI | id)','Identificar la cuenta'],
+ ['Cancelación','ERP','Lectura','GET /query contract (por código | por suministro | por cliente)','Fallbacks y contratos de la cuenta'],
+ ['Cancelación','ERP','Lectura','GET /query supply_point (por CUPS)','Fallback por CUPS'],
+ ['Cancelación','ERP','Lectura','GET /query atr_process (10 códigos ATR)','Estado frente a la distribuidora'],
+ ['Cancelación','ERP','Escritura','PATCH /contract/ { contract_status: cancelled }','Solo rama «no enviado», detrás del flag de sombra'],
+ ['Cancelación','Google Sheets','Escritura','addRow','Calibración por rama'],
+ ['Voz','Telefonía','Evento','Redirección de llamada → agente','Entrada al agente'],
+ ['Voz','Make','Webhook','POST precarga (antes del saludo)','Identificación, horario, disponibilidad'],
+ ['Voz','BigQuery','Lectura','SQL teléfono → cuenta','Reconocer al cliente'],
+ ['Voz','Telefonía','Lectura','POST estadísticas en tiempo real de la cola','Agentes libres'],
+ ['Voz','Salesforce','Lectura','Cuenta por DNI/NIE','Identificación de respaldo'],
+ ['Voz','Salesforce','Escritura','POST Case clasificado','Caso creado durante la llamada'],
+ ['Voz','Data store','Lectura/escritura','clave conversation_id','Hilar crear caso y agendar sin duplicados'],
+ ['Voz','Telefonía','Escritura','Transferencia en conferencia · alta de callback','Cierre de la llamada']
+];
+document.querySelector('#apitable tbody').innerHTML=API.map((r,i)=>`<tr><td>${r[0]}</td><td class="n">${i+1}</td><td>${r[1]}</td><td>${r[2]}</td><td><code>${esc(r[3])}</code></td><td>${r[4]}</td></tr>`).join('');
+
+/* ===== simulador de cancelación ===== */
+const $=id=>document.getElementById(id);
+function sim(){
+  const st=$('s-status').value, pr=$('s-proc').value, d=+$('s-days').value||0, live=$('s-live').checked, sh=$('s-shadow').checked;
+  const tr=[`contract_status = ${st}`,`dias_desde_firma = ${d}`];
+  let rama,who,desc;
+  if(live){rama='ya_en_tramite';who='human';desc='Ya hay una anulación o desistimiento vivo: se informa al cliente de que está en curso y no se duplica el trámite.';tr.push('tramite_en_curso → true')}
+  else if(st==='terminated'){rama='no_aplica_ya_finalizado';who='human';desc='El contrato ya está finalizado: no es una cancelación. Nota al agente.'}
+  else if(st==='active'){tr.push('active → no hace falta leer procesos ATR');
+    if(d<=14){rama='activado_en_plazo';who='human';desc='Activo y dentro de plazo: desistimiento formal a la distribuidora. Lo tramita una persona; el borrador avisa de una posible factura pequeña.'}
+    else{rama='fuera_de_plazo';who='human';desc='Pasaron más de 14 días según nuestra fecha de firma, pero el reloj de la distribuidora puede empezar más tarde: se intenta igual el trámite y, solo si lo rechazan, se ofrece la baja normal.'}}
+  else{tr.push(`ultima_alta = ${pr==='none'?'ninguna':pr}`);
+    if(pr==='none'||pr==='Rechazado'){rama='no_enviado';who='auto';desc=sh?'Nunca salió hacia la distribuidora. El flujo cancelaría en el ERP, pero el shadow gate redirige el PATCH: patch_status = gateado y el borrador no afirma la cancelación.':'Nunca salió hacia la distribuidora: PATCH contract_status = cancelled, se verifica el resultado y después se redacta la confirmación.';tr.push(sh?'PATCH → id inocuo (sombra)':'PATCH /contract/ → cancelled')}
+    else{rama='enviado_no_activado';who='human';desc='Enviado pero no activo: anulación de la solicitud en curso. Lo tramita una persona; el borrador avisa de una posible factura pequeña.'+(pr==='Peticion'?' Se añade nota de incidencia abierta con la distribuidora.':'')}}
+  $('s-rama').textContent=rama;
+  const w=$('s-who'); w.className='who '+who; w.textContent=who==='auto'?(sh?'automático · en sombra':'automático'):'revisión humana';
+  $('s-desc').textContent=desc; $('s-trace').textContent=tr.join('\n')+`\n→ rama = ${rama}`;
+  $('s-proc').disabled = st==='active'||st==='terminated';
+}
+['s-status','s-proc','s-days','s-live','s-shadow'].forEach(id=>$(id).addEventListener('input',sim)); sim();
+
+window.addEventListener('beforeprint',()=>document.querySelectorAll('.flowbox').forEach(b=>b._fit&&b._fit()));
+/* tablas con scroll propio en móvil */
+document.querySelectorAll('table.t').forEach(t=>{if(!t.parentElement.classList.contains('tablewrap')){const w=document.createElement('div');w.className='tablewrap';t.before(w);w.appendChild(t)}});
+/* ===== capítulo activo ===== */
+const links=[...document.querySelectorAll('nav.chapters a')];
+const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){links.forEach(l=>l.classList.toggle('on',l.getAttribute('href')==='#'+e.target.id))}})},{rootMargin:'-45% 0px -50% 0px'});
+document.querySelectorAll('section.ch').forEach(s=>io.observe(s));
+</script>
+</body>
+</html>
